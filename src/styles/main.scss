@@ -1,0 +1,9 @@
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  margin: 0; /* 关键：去除浏览器的默认8px边距 */
+  padding: 0;
+  overflow: hidden; /* 关键：禁止 body 级别的滚动 */
+}
