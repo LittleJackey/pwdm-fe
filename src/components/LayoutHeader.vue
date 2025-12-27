@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/modules/user'
+import { logoutApi } from '@/services/user'
+import { ElMessage } from 'element-plus'
 
 defineProps<{
   isCollapse: boolean
@@ -19,7 +21,16 @@ const breadcrumbs = computed(() => {
   return route.matched.filter((item) => item.meta && item.meta.title)
 })
 
-const handleLogout = () => router.push('/login')
+const handleLogout = async () => {
+  await logoutApi()
+  router.push('/login')
+  ElMessage.success({ message: '登出成功', plain: true })
+}
+const handleUserInfo = () =>
+  router.push({
+    path: '/user-info',
+    query: { returnUrl: router.currentRoute.value.fullPath }
+  })
 </script>
 
 <template>
@@ -48,6 +59,9 @@ const handleLogout = () => router.push('/login')
           <el-icon class="el-icon--right"><arrow-down /></el-icon>
         </span>
         <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item @click="handleUserInfo">个人中心</el-dropdown-item>
+          </el-dropdown-menu>
           <el-dropdown-menu>
             <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
           </el-dropdown-menu>

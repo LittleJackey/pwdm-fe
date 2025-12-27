@@ -15,9 +15,15 @@ export type User = {
   createTime: Date
 }
 
-export type LoginDto = {
+export type LoginDTO = {
   username: string
   password: string
   captchaUuid: string
   captchaCode: string
+}
+
+export type UserUpdateDTO = {
+  uid?: string
+  username: string
+  password: string
 }

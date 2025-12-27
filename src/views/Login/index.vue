@@ -6,11 +6,11 @@ import { encodePassword, getCaptchaImgApi, loginByPassword } from '@/services/us
 import { useUserStore } from '@/stores/modules/user'
 import { loginRules } from '@/utils/rules'
 import { useRoute, useRouter } from 'vue-router'
-import type { LoginDto } from '@/types/user'
+import type { LoginDTO } from '@/types/user'
 
 const loginFormRef = ref<FormInstance>()
 
-const loginForm = reactive<LoginDto>({
+const loginForm = reactive<LoginDTO>({
   username: '',
   password: '',
   captchaUuid: '',
@@ -21,7 +21,10 @@ const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 
-const captchaImgBase64 = ref('')
+// 默认为图片加载失败
+const captchaImgBase64 = ref(
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxNHB4IiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+5Zu+54mH5Yqg6L295aSx6LSlPC90ZXh0Pjwvc3ZnPg=='
+)
 const captchaImgExpired = ref(false)
 let captchaImgExpireTimer: number | null = null // 定时器句柄
 
@@ -58,10 +61,10 @@ const loginLoading = ref(false)
 
 const handleLogin = async () => {
   try {
-    await loginFormRef.value!.validate()
     loginLoading.value = true
+    await loginFormRef.value!.validate()
 
-    const loginDto: LoginDto = {
+    const loginDto: LoginDTO = {
       ...loginForm,
       password: encodePassword(loginForm.password)
     }

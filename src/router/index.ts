@@ -21,6 +21,11 @@ const router = createRouter({
       meta: { title: '登录' }
     },
     {
+      path: '/user-info',
+      component: () => import('@/views/UserInfo/index.vue'),
+      meta: { title: '个人中心' }
+    },
+    {
       path: '/',
       redirect: '/home',
       component: () => import('@/views/Layout/index.vue'),

@@ -25,3 +25,14 @@ export const loginRules = reactive<FormRules>({
     { min: 4, max: 4, message: '验证码为4个字符', trigger: 'blur' }
   ]
 })
+
+export const updateMyProfileRules = reactive<FormRules>({
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 5, max: 20, message: '用户名应该为5-20个字符', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { pattern: REGEXP_PWD, message: '密码必须包含大写字母、小写字母、数字和特殊字符，且长度为8-24位', trigger: 'blur' }
+  ]
+})
