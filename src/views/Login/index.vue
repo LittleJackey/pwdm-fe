@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue' // 引入图标
-import { encodePassword, getCaptchaImgApi, loginByPassword } from '@/services/user'
+import { encodePassword, getCaptchaImgApi, loginByPasswordApi } from '@/services/user'
 import { useUserStore } from '@/stores/modules/user'
 import { loginRules } from '@/utils/rules'
 import { useRoute, useRouter } from 'vue-router'
@@ -68,7 +68,7 @@ const handleLogin = async () => {
       ...loginForm,
       password: encodePassword(loginForm.password)
     }
-    const res = await loginByPassword(loginDto)
+    const res = await loginByPasswordApi(loginDto)
     userStore.setUser(res.data)
     ElMessage.success({ message: '登录成功', plain: true })
     // 如果有回跳地址就进行回跳，没有跳转到home

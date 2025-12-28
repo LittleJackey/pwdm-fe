@@ -17,11 +17,13 @@ const router = createRouter({
   routes: [
     {
       path: '/login',
+      name: 'Login',
       component: () => import('@/views/Login/index.vue'),
       meta: { title: '登录' }
     },
     {
       path: '/user-info',
+      name: 'UserInfo',
       component: () => import('@/views/UserInfo/index.vue'),
       meta: { title: '个人中心' }
     },
@@ -32,11 +34,13 @@ const router = createRouter({
       children: [
         {
           path: '/home',
+          name: 'Home',
           component: () => import('@/views/Home/index.vue'),
           meta: { title: '首页' }
         },
         {
           path: '/pwdm',
+          name: 'PWDM',
           component: () => import('@/views/Pwdm/index.vue'),
           meta: { title: '密码管理' }
         }

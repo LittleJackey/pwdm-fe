@@ -23,12 +23,12 @@ const breadcrumbs = computed(() => {
 
 const handleLogout = async () => {
   await logoutApi()
-  router.push('/login')
+  router.replace({ name: 'Login' })
   ElMessage.success({ message: '登出成功', plain: true })
 }
 const handleUserInfo = () =>
   router.push({
-    path: '/user-info',
+    name: 'UserInfo',
     query: { returnUrl: router.currentRoute.value.fullPath }
   })
 </script>
