@@ -10,7 +10,7 @@ const eccPublicKeyBase64 =
  */
 export const eccEncrypt = (plainText: string): string => {
   try {
-    // 1. 解析后端给的公钥
+    // 1. 解析公钥
     const pubKeyBin = atob(eccPublicKeyBase64)
     const pubKeyArray = new Uint8Array(pubKeyBin.length)
     for (let i = 0; i < pubKeyBin.length; i++) {

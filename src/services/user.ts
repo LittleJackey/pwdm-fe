@@ -7,6 +7,8 @@ export const loginByPasswordApi = (loginDto: LoginDTO) => {
   return request<User>('auth/login/password', 'POST', loginDto)
 }
 
+export const getUserInfoApi = () => request<User>('user', 'GET')
+
 export const encodePassword = (password: string) => {
   return eccEncrypt(password)
 }

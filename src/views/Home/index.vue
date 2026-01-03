@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { getRsaKeyPairPemApi, storeRsaPublicKeyApi } from '@/services/user'
+import { getRsaKeyPairPemApi, getUserInfoApi, storeRsaPublicKeyApi } from '@/services/user'
 import { useUserStore } from '@/stores/modules/user'
 import type { RsaKeyPairPemVO } from '@/types/user'
-import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { onMounted, reactive, ref } from 'vue'
 
 const userStore = useUserStore()
 const rsaKeyPairPem = reactive<RsaKeyPairPemVO>({
@@ -47,22 +47,39 @@ const handleDownloadRsaPrivateKeyPem = () => {
 
 const storeRsaLoading = ref(false)
 const handleStoreCurrentRsaKeyPair = async () => {
-  try {
-    storeRsaLoading.value = true
+  ElMessageBox.confirm('请确保您已经保存了RSA私钥', '提示', {
+    cancelButtonText: '下载私钥',
+    confirmButtonText: '我已经保存',
+    type: 'warning'
+  })
+    .then(async () => {
+      try {
+        storeRsaLoading.value = true
 
-    if (rsaKeyPairPem.uuid === '') {
-      return ElMessage.error({ message: '请先生成RSA密钥对', plain: true })
-    }
+        if (rsaKeyPairPem.uuid === '') {
+          return ElMessage.error({ message: '请先生成RSA密钥对', plain: true })
+        }
 
-    await storeRsaPublicKeyApi(rsaKeyPairPem.uuid)
-    if (userStore.user) {
-      userStore.user.isRsaGenerated = true
-    }
-    ElMessage.success({ message: '成功', plain: true })
-  } finally {
-    storeRsaLoading.value = false
-  }
+        await storeRsaPublicKeyApi(rsaKeyPairPem.uuid)
+        getUserInfo()
+        ElMessage.success({ message: '成功', plain: true })
+      } finally {
+        storeRsaLoading.value = false
+      }
+    })
+    .catch(() => {
+      handleDownloadRsaPrivateKeyPem()
+    })
 }
+
+const getUserInfo = async () => {
+  const res = await getUserInfoApi()
+  userStore.setUser(res.data)
+}
+
+onMounted(() => {
+  getUserInfo()
+})
 </script>
 
 <template>
