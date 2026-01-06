@@ -44,16 +44,13 @@ const showManualInput = ref(false)
 const manualKey = ref('')
 const rsaStore = useRsaStore()
 const handleManualSubmit = () => {
-  const result = rsaStore.setPrivateKeyPemContent(manualKey.value)
-  if (!result.success) {
-    return ElMessage.error({
-      message: result.message || '无效的私钥',
-      plain: true
-    })
+  try {
+    rsaStore.setPrivateKeyPemContent(manualKey.value)
+    handleClose()
+    props.afterManualSubmit()
+  } catch (e) {
+    return ElMessage.error({ message: (e as Error).message || '无效的私钥', plain: true })
   }
-
-  handleClose()
-  props.afterManualSubmit()
 }
 
 const placeholderText = `请粘贴 RSA 私钥内容：

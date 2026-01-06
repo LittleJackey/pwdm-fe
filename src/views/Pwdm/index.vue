@@ -200,7 +200,7 @@ const openDialog = async (type: 'add' | 'update', row?: AccountVO) => {
 }
 
 const checkAndRequestRsaPrivateKey = async () => {
-  if (!rsaStore.lastIsCorrectPrivateKeyResult) {
+  if (!rsaStore.isKeyValidAndMatched) {
     decryptKeyDialogTitle.value = '需要RSA私钥'
     decryptKeyDialogMessage.value = '该需要先传入RSA私钥'
     decryptKeyDialogVisible.value = true
@@ -225,7 +225,7 @@ const waitForUserAction = (): Promise<boolean> => {
       (visible) => {
         if (!visible) {
           // 对话框关闭后，检查私钥是否正确
-          if (rsaStore.lastIsCorrectPrivateKeyResult) {
+          if (rsaStore.isKeyValidAndMatched) {
             resolve(true) // 用户操作成功
           } else {
             resolve(false) // 用户取消或失败
@@ -288,7 +288,7 @@ const fileList = ref<UploadUserFile[]>([])
 const showUploader = ref(true) // 控制上传组件显隐
 
 const afterManualSubmit = () => {
-  if (rsaStore.isCorrectPrivateKey()) {
+  if (rsaStore.isKeyValidAndMatched) {
     showUploader.value = false
     fileList.value = [{ name: '来自手动输入', url: '', uid: Date.now() }]
   }
@@ -324,15 +324,14 @@ const handleFileChange = (uploadFile: UploadFile) => {
     decryptKeyDialogVisible.value = false
     if (e.target?.result && typeof e.target.result === 'string') {
       // 成功获取字符串内容
-
-      const result = rsaStore.setPrivateKeyPemContent(e.target.result)
-      if (!result.success) {
-        return ElMessage.error({ message: result.message || '无效的私钥', plain: true })
+      try {
+        rsaStore.setPrivateKeyPemContent(e.target.result)
+        fileList.value = [{ name: rawFile.name, url: '', uid: rawFile.uid }]
+        showUploader.value = false // 隐藏上传组件
+        ElMessage.success({ message: `${rawFile.name} 上传成功`, plain: true })
+      } catch (e) {
+        return ElMessage.error({ message: (e as Error).message || '无效的私钥', plain: true })
       }
-
-      fileList.value = [{ name: rawFile.name, url: '', uid: rawFile.uid }]
-      showUploader.value = false // 隐藏上传组件
-      ElMessage.success({ message: `${rawFile.name} 上传成功`, plain: true })
     }
   }
   // 读取失败的回调
@@ -350,7 +349,7 @@ const triggerUpload = () => {
 }
 
 const handleRemoveFile = () => {
-  rsaStore.removePrivateKey()
+  rsaStore.clearPrivateKey()
   fileList.value = []
   showUploader.value = true // 显示上传组件
 }

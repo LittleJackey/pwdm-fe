@@ -1,6 +1,6 @@
 import { isPrivateKeyValid, sign, verify } from '@/utils/rsa'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 export const useRsaStore = defineStore(
   'pwdm-rsa',
@@ -8,68 +8,47 @@ export const useRsaStore = defineStore(
     const publicKeyPemContent = ref('')
     const privateKeyPemContent = ref('')
 
-    const lastIsCorrectPrivateKeyResult = ref(false)
-    const isCorrectPrivateKey = () => {
-      if (publicKeyPemContent.value && privateKeyPemContent.value) {
-        try {
-          const data = 'verify'
-          const signature = sign(data, privateKeyPemContent.value)
-          lastIsCorrectPrivateKeyResult.value = true
-          return verify(data, signature, publicKeyPemContent.value)
-          // eslint-disable-next-line
-        } catch (e) {
-          lastIsCorrectPrivateKeyResult.value = false
-          return false
-        }
-      }
-      lastIsCorrectPrivateKeyResult.value = false
-      return false
-    }
-
-    const setPrivateKeyPemContent = (key: string): { success: boolean; message?: string } => {
-      // 验证格式
-      if (!isPrivateKeyValid(key)) {
-        lastIsCorrectPrivateKeyResult.value = false
-        return {
-          success: false,
-          message: '私钥格式无效'
-        }
-      }
-
-      // 验证秘钥是否配对
-      privateKeyPemContent.value = key
+    // 优化：使用 computed 实时判断私钥是否有效且匹配
+    const isKeyValidAndMatched = computed(() => {
+      if (!publicKeyPemContent.value || !privateKeyPemContent.value) return false
+      // 基础格式校验
+      if (!isPrivateKeyValid(privateKeyPemContent.value)) return false
 
       try {
-        if (!isCorrectPrivateKey()) {
-          return {
-            success: false,
-            message: '私钥与公钥不匹配'
-          }
-        }
-
-        return { success: true }
+        // 签名验签测试匹配性
+        const data = 'verify-match-check'
+        const signature = sign(data, privateKeyPemContent.value)
+        return verify(data, signature, publicKeyPemContent.value)
         // eslint-disable-next-line
       } catch (e) {
+        return false
+      }
+    })
+
+    const setPrivateKeyPemContent = (key: string) => {
+      if (!isPrivateKeyValid(key)) {
+        throw new Error('私钥格式无效')
+      }
+      privateKeyPemContent.value = key
+
+      // 设置后立即检查匹配性
+      if (!isKeyValidAndMatched.value) {
+        // 如果不匹配，设为空串
         privateKeyPemContent.value = ''
-        return {
-          success: false,
-          message: '密钥验证过程出错'
-        }
+        throw new Error('私钥与当前公钥不匹配')
       }
     }
 
-    const removePrivateKey = () => {
+    const clearPrivateKey = () => {
       privateKeyPemContent.value = ''
-      lastIsCorrectPrivateKeyResult.value = false
     }
 
     return {
       publicKeyPemContent,
       privateKeyPemContent,
-      lastIsCorrectPrivateKeyResult,
-      isCorrectPrivateKey,
+      isKeyValidAndMatched,
       setPrivateKeyPemContent,
-      removePrivateKey
+      clearPrivateKey
     }
   },
   {

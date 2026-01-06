@@ -23,7 +23,7 @@ const emits = defineEmits<{
 
 const rsaStore = useRsaStore()
 const decryptPassword = (pwd: string) => {
-  if (rsaStore.lastIsCorrectPrivateKeyResult) {
+  if (rsaStore.isKeyValidAndMatched) {
     try {
       return decrypt(pwd, rsaStore.privateKeyPemContent)
     } catch (e) {
