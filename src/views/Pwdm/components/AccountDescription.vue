@@ -22,23 +22,41 @@ const emits = defineEmits<{
 }>()
 
 const rsaStore = useRsaStore()
-const decryptPassword = (pwd: string) => {
+
+// 通用解密函数
+const decryptContent = (cipherText: string | undefined | null) => {
+  // 如果数据库里存的是空，直接返回空，不要显示“待解密”
+  if (!cipherText) return ''
+
   if (rsaStore.isKeyValidAndMatched) {
     try {
-      return decrypt(pwd, rsaStore.privateKeyPemContent)
+      return decrypt(cipherText, rsaStore.privateKeyPemContent)
     } catch (e) {
       console.error('解密失败', e)
+      // 如果解密失败（可能是密钥不对），可以选择调用 props.onRemove() 或显示错误
       props.onRemove()
     }
   }
   return '待解密'
 }
 
-const password = computed(() => decryptPassword(props.row.password))
+// 创建各个字段的 Computed 属性
+const password = computed(() => decryptContent(props.row.password))
+const recoveryCodes = computed(() => decryptContent(props.row.recoveryCodes))
+
+const securityQuestion1 = computed(() => decryptContent(props.row.securityQuestion1))
+const securityAnswer1 = computed(() => decryptContent(props.row.securityAnswer1))
+
+const securityQuestion2 = computed(() => decryptContent(props.row.securityQuestion2))
+const securityAnswer2 = computed(() => decryptContent(props.row.securityAnswer2))
+
+const securityQuestion3 = computed(() => decryptContent(props.row.securityQuestion3))
+const securityAnswer3 = computed(() => decryptContent(props.row.securityAnswer3))
 
 const { copy, isSupported } = useClipboard()
 
 const handleCopy = async (text: string) => {
+  if (!text || text === '待解密') return // 防止误操作
   if (!isSupported.value) {
     ElMessage.error({ message: '当前浏览器不支持自动复制', plain: true })
     return
@@ -82,7 +100,7 @@ const handleClickCipher = () => {
       </el-descriptions-item>
 
       <el-descriptions-item label="密码" class-name="red-content">
-        <span v-if="password === '待解密'" @click="handleClickCipher">
+        <span v-if="password === '待解密'" class="clickable-text" @click="handleClickCipher">
           {{ password }}
         </span>
         <el-tooltip v-else content="点击复制" placement="bottom">
@@ -125,7 +143,14 @@ const handleClickCipher = () => {
       </el-descriptions-item>
 
       <el-descriptions-item label="恢复代码">
-        {{ props.row.recoveryCodes }}
+        <span v-if="recoveryCodes === '待解密'" class="clickable-text" @click="handleClickCipher">
+          {{ recoveryCodes }}
+        </span>
+        <el-tooltip v-else-if="recoveryCodes" content="点击复制" placement="bottom">
+          <span class="clickable-text" @click="handleCopy(recoveryCodes)">
+            {{ recoveryCodes }}
+          </span>
+        </el-tooltip>
       </el-descriptions-item>
 
       <el-descriptions-item label="第二邮箱">
@@ -145,27 +170,69 @@ const handleClickCipher = () => {
       </el-descriptions-item>
 
       <el-descriptions-item label="安全问题1" v-if="props.row.securityQuestion1">
-        {{ props.row.securityQuestion1 }}
+        <span v-if="securityQuestion1 === '待解密'" class="clickable-text" @click="handleClickCipher">
+          {{ securityQuestion1 }}
+        </span>
+        <el-tooltip v-else content="点击复制" placement="bottom">
+          <span class="clickable-text" @click="handleCopy(securityQuestion1)">
+            {{ securityQuestion1 }}
+          </span>
+        </el-tooltip>
       </el-descriptions-item>
 
-      <el-descriptions-item label="安全答案1" v-if="props.row.securityQuestion1">
-        {{ props.row.securityAnswer1 }}
+      <el-descriptions-item label="安全答案1" v-if="props.row.securityAnswer1">
+        <span v-if="securityAnswer1 === '待解密'" class="clickable-text" @click="handleClickCipher">
+          {{ securityAnswer1 }}
+        </span>
+        <el-tooltip v-else content="点击复制" placement="bottom">
+          <span class="clickable-text" @click="handleCopy(securityAnswer1)">
+            {{ securityAnswer1 }}
+          </span>
+        </el-tooltip>
       </el-descriptions-item>
 
       <el-descriptions-item label="安全问题2" v-if="props.row.securityQuestion2">
-        {{ props.row.securityQuestion2 }}
+        <span v-if="securityQuestion2 === '待解密'" class="clickable-text" @click="handleClickCipher">
+          {{ securityQuestion2 }}
+        </span>
+        <el-tooltip v-else content="点击复制" placement="bottom">
+          <span class="clickable-text" @click="handleCopy(securityQuestion2)">
+            {{ securityQuestion2 }}
+          </span>
+        </el-tooltip>
       </el-descriptions-item>
 
-      <el-descriptions-item label="安全答案2" v-if="props.row.securityQuestion2">
-        {{ props.row.securityAnswer2 }}
+      <el-descriptions-item label="安全答案2" v-if="props.row.securityAnswer2">
+        <span v-if="securityAnswer2 === '待解密'" class="clickable-text" @click="handleClickCipher">
+          {{ securityAnswer2 }}
+        </span>
+        <el-tooltip v-else content="点击复制" placement="bottom">
+          <span class="clickable-text" @click="handleCopy(securityAnswer2)">
+            {{ securityAnswer2 }}
+          </span>
+        </el-tooltip>
       </el-descriptions-item>
 
       <el-descriptions-item label="安全问题3" v-if="props.row.securityQuestion3">
-        {{ props.row.securityQuestion3 }}
+        <span v-if="securityQuestion3 === '待解密'" class="clickable-text" @click="handleClickCipher">
+          {{ securityQuestion3 }}
+        </span>
+        <el-tooltip v-else content="点击复制" placement="bottom">
+          <span class="clickable-text" @click="handleCopy(securityQuestion3)">
+            {{ securityQuestion3 }}
+          </span>
+        </el-tooltip>
       </el-descriptions-item>
 
-      <el-descriptions-item label="安全答案3" v-if="props.row.securityQuestion3">
-        {{ props.row.securityAnswer3 }}
+      <el-descriptions-item label="安全答案3" v-if="props.row.securityAnswer3">
+        <span v-if="securityAnswer3 === '待解密'" class="clickable-text" @click="handleClickCipher">
+          {{ securityAnswer3 }}
+        </span>
+        <el-tooltip v-else content="点击复制" placement="bottom">
+          <span class="clickable-text" @click="handleCopy(securityAnswer3)">
+            {{ securityAnswer3 }}
+          </span>
+        </el-tooltip>
       </el-descriptions-item>
     </el-descriptions>
   </div>
@@ -174,10 +241,13 @@ const handleClickCipher = () => {
 <style lang="scss" scoped>
 .clickable-text {
   cursor: pointer;
-  border-bottom: 1px dashed #ccc; /* 加个虚线提示可点击，可选 */
+  border-bottom: 1px dashed #ccc; /* 加个虚线提示可点击 */
+  /* 增加一点内边距让点击更容易 */
+  padding-bottom: 1px;
 }
 .clickable-text:hover {
   color: #409eff;
+  border-bottom-color: #409eff;
 }
 
 :deep(.green-content) {

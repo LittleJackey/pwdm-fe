@@ -69,22 +69,22 @@ const handleOpened = () => {
     formData.password = decrypt(formData.password!, rsaStore.privateKeyPemContent)
 
     if (formData.recoveryCodes) {
-      formData.recoveryCodes = decrypt(formData.recoveryCodes, rsaStore.publicKeyPemContent)
+      formData.recoveryCodes = decrypt(formData.recoveryCodes, rsaStore.privateKeyPemContent)
     }
 
     if (formData.securityQuestion1 && formData.securityAnswer1) {
-      formData.securityQuestion1 = encrypt(formData.securityQuestion1, rsaStore.publicKeyPemContent)
-      formData.securityAnswer1 = encrypt(formData.securityAnswer1, rsaStore.publicKeyPemContent)
+      formData.securityQuestion1 = decrypt(formData.securityQuestion1, rsaStore.privateKeyPemContent)
+      formData.securityAnswer1 = decrypt(formData.securityAnswer1, rsaStore.privateKeyPemContent)
     }
 
     if (formData.securityQuestion2 && formData.securityAnswer2) {
-      formData.securityQuestion2 = encrypt(formData.securityQuestion2, rsaStore.publicKeyPemContent)
-      formData.securityAnswer2 = encrypt(formData.securityAnswer2, rsaStore.publicKeyPemContent)
+      formData.securityQuestion2 = decrypt(formData.securityQuestion2, rsaStore.privateKeyPemContent)
+      formData.securityAnswer2 = decrypt(formData.securityAnswer2, rsaStore.privateKeyPemContent)
     }
 
     if (formData.securityQuestion3 && formData.securityAnswer3) {
-      formData.securityQuestion3 = encrypt(formData.securityQuestion3, rsaStore.publicKeyPemContent)
-      formData.securityAnswer3 = encrypt(formData.securityAnswer3, rsaStore.publicKeyPemContent)
+      formData.securityQuestion3 = decrypt(formData.securityQuestion3, rsaStore.privateKeyPemContent)
+      formData.securityAnswer3 = decrypt(formData.securityAnswer3, rsaStore.privateKeyPemContent)
     }
   }
 }
