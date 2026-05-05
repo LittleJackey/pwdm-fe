@@ -37,6 +37,20 @@ export const updateMyProfileRules = reactive<FormRules>({
   ]
 })
 
+export const registerRules = reactive<FormRules>({
+  inviteCode: [
+    { required: true, message: '请输入邀请码', trigger: 'blur' }
+  ],
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 5, max: 20, message: '用户名应该为5-20个字符', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { pattern: REGEXP_PWD, message: '密码必须包含大写字母、小写字母、数字和特殊字符，且长度为8-24位', trigger: 'blur' }
+  ]
+})
+
 export const addOrUpdateAccountRules = reactive<FormRules>({
   website: [
     { required: true, message: '请输入网站名称', trigger: 'blur' },
@@ -65,6 +79,7 @@ export const addOrUpdateAccountRules = reactive<FormRules>({
     { max: 200, message: '长度不超过 200 个字符', trigger: 'blur' }
   ],
   mfaProvider: [{ max: 50, message: '长度不超过 50 个字符', trigger: 'blur' }],
+  recoveryCodes: [{ max: 50, message: '长度不超过 256 个字符', trigger: 'blur' }],
   securityQuestion1: [
     { required: false, message: '请输入安全问题1', trigger: 'blur' },
     { max: 50, message: '长度不超过 50 个字符', trigger: 'blur' }

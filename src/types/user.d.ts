@@ -5,14 +5,8 @@ export type User = {
   /* 用户名 */
   username: string
 
-  /* RSA公钥 */
-  rsaPublicKey: string
-
   /* 角色: admin 或 user */
   role: string
-
-  /* 是否已经生成rsa秘钥: 0-未生成, 1-已生成 */
-  isRsaGenerated: boolean
 
   /* 创建时间 */
   createTime: Date
@@ -25,14 +19,14 @@ export type LoginDTO = {
   captchaCode: string
 }
 
-export type UserUpdateDTO = {
-  uid?: string
+export type RegisterDTO = {
+  inviteCode: string
   username: string
   password: string
 }
 
-export type RsaKeyPairPemVO = {
-  uuid: string
-  publicKeyPemContent: string
-  privateKeyPemContent: string
+export type UserUpdateDTO = {
+  uid?: string
+  username: string
+  password: string
 }
