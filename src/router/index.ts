@@ -79,21 +79,24 @@ router.beforeEach(async (to) => {
       return '/home'
     }
 
-    // Keystore check (only once, skip on setup page itself)
-    if (!keystoreStatusChecked && to.path !== '/setup') {
-      try {
-        const res = await getKdfConfigAndVerificationApi()
-        hasKeystore = res.data.exists === true
-        keystoreStatusChecked = true
-      } catch {
-        hasKeystore = false
-        keystoreStatusChecked = true
+    // admin 角色豁免 keystore 检查
+    if (userStore.user.role !== 'admin') {
+      // Keystore check (only once, skip on setup page itself)
+      if (!keystoreStatusChecked && to.path !== '/setup') {
+        try {
+          const res = await getKdfConfigAndVerificationApi()
+          hasKeystore = res.data.exists === true
+          keystoreStatusChecked = true
+        } catch {
+          hasKeystore = false
+          keystoreStatusChecked = true
+        }
       }
-    }
 
-    // Redirect to setup if no keystore
-    if (!hasKeystore && !['/setup', '/logout'].includes(to.path)) {
-      return '/setup'
+      // Redirect to setup if no keystore
+      if (!hasKeystore && !['/setup', '/logout'].includes(to.path)) {
+        return '/setup'
+      }
     }
   }
 })
