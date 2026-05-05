@@ -19,6 +19,41 @@ const dialogVisible = ref(false)
 const generateLoading = ref(false)
 const expiresAt = ref('')
 
+const expireShortcuts = [
+  {
+    text: '1天后',
+    value: () => {
+      const d = new Date()
+      d.setDate(d.getDate() + 1)
+      return d
+    }
+  },
+  {
+    text: '7天后',
+    value: () => {
+      const d = new Date()
+      d.setDate(d.getDate() + 7)
+      return d
+    }
+  },
+  {
+    text: '30天后',
+    value: () => {
+      const d = new Date()
+      d.setDate(d.getDate() + 30)
+      return d
+    }
+  },
+  {
+    text: '90天后',
+    value: () => {
+      const d = new Date()
+      d.setDate(d.getDate() + 90)
+      return d
+    }
+  }
+]
+
 const statusMap: Record<number, { text: string; type: string }> = {
   0: { text: '未使用', type: 'success' },
   1: { text: '已使用', type: 'info' },
@@ -95,9 +130,7 @@ onMounted(() => fetchList())
   <div class="invite-page">
     <div class="page-header">
       <h2>邀请码管理</h2>
-      <el-button type="primary" :icon="Plus" @click="openGenerateDialog">
-        生成邀请码
-      </el-button>
+      <el-button type="primary" :icon="Plus" @click="openGenerateDialog"> 生成邀请码 </el-button>
     </div>
 
     <div class="filter-row">
@@ -158,7 +191,7 @@ onMounted(() => fetchList())
             type="datetime"
             placeholder="不选则永不过期"
             value-format="YYYY-MM-DDTHH:mm:ss"
-            :shortcuts="[]"
+            :shortcuts="expireShortcuts"
             style="width: 100%"
           />
         </el-form-item>
@@ -205,5 +238,9 @@ onMounted(() => fetchList())
   font-size: 13px;
   color: #909399;
   margin-top: -8px;
+}
+
+:deep(.el-picker-panel__link-btn) {
+  display: none;
 }
 </style>
