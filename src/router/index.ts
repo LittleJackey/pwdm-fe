@@ -34,12 +34,6 @@ const router = createRouter({
       meta: { title: '个人中心', requiresAuth: true }
     },
     {
-      path: '/admin/invite',
-      name: 'AdminInvite',
-      component: () => import('@/views/Admin/Invite/index.vue'),
-      meta: { title: '邀请码管理', requiresAuth: true, role: 'admin' }
-    },
-    {
       path: '/',
       redirect: '/home',
       component: () => import('@/views/Layout/index.vue'),
@@ -55,6 +49,12 @@ const router = createRouter({
           name: 'PWDM',
           component: () => import('@/views/Pwdm/index.vue'),
           meta: { title: '密码管理', requiresAuth: true }
+        },
+        {
+          path: '/admin/invite',
+          name: 'AdminInvite',
+          component: () => import('@/views/Admin/Invite/index.vue'),
+          meta: { title: '邀请码管理', requiresAuth: true, role: 'admin' }
         }
       ]
     }
