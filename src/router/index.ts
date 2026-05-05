@@ -93,7 +93,7 @@ router.beforeEach(async (to) => {
 
     // Redirect to setup if no keystore
     if (!hasKeystore && !['/setup', '/logout'].includes(to.path)) {
-      return '/setup'
+      return { path: '/setup', query: { returnUrl: to.fullPath } }
     }
   }
 })

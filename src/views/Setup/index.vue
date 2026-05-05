@@ -3,12 +3,12 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useVaultStore } from '@/stores/modules/vault'
 import { setupKeystoreApi } from '@/services/keystore'
-import { useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 
 const pin = ref('')
 const loading = ref(false)
 const vaultStore = useVaultStore()
-const router = useRouter()
+const route = useRoute()
 
 const handleSetup = async () => {
   if (!pin.value) {
@@ -38,7 +38,8 @@ const handleSetup = async () => {
     })
 
     ElMessage.success({ message: '密码库初始化成功', plain: true })
-    router.replace('/home')
+    const returnUrl = (route.query.returnUrl as string) || '/home'
+    window.location.href = returnUrl
   } catch (error: unknown) {
     ElMessage.error({ message: error instanceof Error ? error.message : '初始化失败', plain: true })
   } finally {
