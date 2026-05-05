@@ -1,18 +1,31 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { Odometer, Lock } from '@element-plus/icons-vue'
+import { Odometer, Lock, Ticket } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/modules/user'
+import { computed } from 'vue'
 
 defineProps<{
   isCollapse: boolean
 }>()
 
 const route = useRoute()
+const userStore = useUserStore()
 
-// 模拟菜单数据
 const menuList = [
   { path: '/home', title: '首页', icon: Odometer },
   { path: '/pwdm', title: '密码管理', icon: Lock }
 ]
+
+const adminMenuList = [
+  { path: '/admin/invite', title: '邀请码管理', icon: Ticket }
+]
+
+const allMenus = computed(() => {
+  if (userStore.user?.role === 'admin') {
+    return [...menuList, ...adminMenuList]
+  }
+  return menuList
+})
 </script>
 
 <template>
@@ -30,7 +43,7 @@ const menuList = [
       :collapse="isCollapse"
       :collapse-transition="false"
     >
-      <el-menu-item v-for="item in menuList" :key="item.path" :index="item.path">
+      <el-menu-item v-for="item in allMenus" :key="item.path" :index="item.path">
         <el-icon><component :is="item.icon" /></el-icon>
         <template #title>
           <span>{{ item.title }}</span>
