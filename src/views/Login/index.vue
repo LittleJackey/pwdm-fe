@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue' // 引入图标
-import { encodePassword, getCaptchaImgApi, loginByPasswordApi } from '@/services/user'
+import { getCaptchaImgApi, loginByPasswordApi } from '@/services/user'
 import { useUserStore } from '@/stores/modules/user'
 import { loginRules } from '@/utils/rules'
 import { useRoute, useRouter } from 'vue-router'
@@ -66,13 +66,22 @@ const handleLogin = async () => {
 
     const loginDto: LoginDTO = {
       ...loginForm,
-      password: encodePassword(loginForm.password)
+      password: loginForm.password
     }
     const res = await loginByPasswordApi(loginDto)
     userStore.setUser(res.data)
     ElMessage.success({ message: '登录成功', plain: true })
-    // 如果有回跳地址就进行回跳，没有跳转到home
-    router.replace((route.query.returnUrl as string) || '/home')
+    const { getKdfConfigAndVerificationApi } = await import('@/services/keystore')
+    try {
+      const kdfRes = await getKdfConfigAndVerificationApi()
+      if (kdfRes.data.exists === true) {
+        router.replace((route.query.returnUrl as string) || '/home')
+      } else {
+        router.replace('/setup')
+      }
+    } catch {
+      router.replace('/setup')
+    }
   } catch (fields) {
     console.log('校验失败', fields)
   } finally {
@@ -131,6 +140,10 @@ onBeforeUnmount(() => {
         </el-form-item>
 
         <el-button :loading="loginLoading" native-type="submit" type="primary" class="submit-btn"> 立即登录 </el-button>
+
+        <div class="register-link">
+          还没有账号？<router-link to="/register">注册</router-link>
+        </div>
       </el-form>
     </div>
   </div>
@@ -236,5 +249,17 @@ onBeforeUnmount(() => {
   height: 44px;
   font-size: 16px;
   letter-spacing: 1px;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 14px;
+  color: #909399;
+
+  a {
+    color: var(--el-color-primary);
+    text-decoration: none;
+  }
 }
 </style>
