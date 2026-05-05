@@ -15,7 +15,9 @@ const query = reactive({
   status: undefined as number | undefined
 })
 
+const dialogVisible = ref(false)
 const generateLoading = ref(false)
+const expiresAt = ref('')
 
 const statusMap: Record<number, { text: string; type: string }> = {
   0: { text: '未使用', type: 'success' },
@@ -40,13 +42,21 @@ const fetchList = async () => {
   }
 }
 
+const openGenerateDialog = () => {
+  expiresAt.value = ''
+  dialogVisible.value = true
+}
+
 const handleGenerate = async () => {
   generateLoading.value = true
   try {
-    const res = await generateInviteApi({})
+    const res = await generateInviteApi({
+      expiresAt: expiresAt.value || undefined
+    })
     const code = res.data
     await navigator.clipboard.writeText(code)
     ElMessage.success({ message: `邀请码已生成并复制: ${code}`, plain: true, duration: 5000 })
+    dialogVisible.value = false
     fetchList()
   } finally {
     generateLoading.value = false
@@ -85,7 +95,7 @@ onMounted(() => fetchList())
   <div class="invite-page">
     <div class="page-header">
       <h2>邀请码管理</h2>
-      <el-button type="primary" :icon="Plus" :loading="generateLoading" @click="handleGenerate">
+      <el-button type="primary" :icon="Plus" @click="openGenerateDialog">
         生成邀请码
       </el-button>
     </div>
@@ -139,6 +149,25 @@ onMounted(() => fetchList())
       @current-change="handlePageChange"
       @size-change="handleSizeChange"
     />
+
+    <el-dialog v-model="dialogVisible" title="生成邀请码" width="420px" :close-on-click-modal="false">
+      <el-form @submit.prevent="handleGenerate">
+        <el-form-item label="过期时间">
+          <el-date-picker
+            v-model="expiresAt"
+            type="datetime"
+            placeholder="不选则永不过期"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <div class="dialog-tip">不设置过期时间则邀请码永久有效</div>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="generateLoading" @click="handleGenerate">确认生成</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -169,5 +198,11 @@ onMounted(() => fetchList())
 .pagination {
   margin-top: 20px;
   justify-content: flex-end;
+}
+
+.dialog-tip {
+  font-size: 13px;
+  color: #909399;
+  margin-top: -8px;
 }
 </style>
