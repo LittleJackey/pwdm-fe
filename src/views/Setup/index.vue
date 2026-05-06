@@ -1,14 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter, useRoute } from 'vue-router'
 import { useVaultStore } from '@/stores/modules/vault'
-import { setupKeystoreApi } from '@/services/keystore'
-import { useRoute } from 'vue-router'
+import { useUserStore } from '@/stores/modules/user'
+import { setupKeystoreApi, getKdfConfigAndVerificationApi } from '@/services/keystore'
 
 const pin = ref('')
 const loading = ref(false)
+const pageReady = ref(false)
 const vaultStore = useVaultStore()
+const userStore = useUserStore()
+const router = useRouter()
 const route = useRoute()
+
+onMounted(async () => {
+  try {
+    const res = await getKdfConfigAndVerificationApi()
+    if (res.data.exists) {
+      userStore.user!.keystoreSetup = true
+      const returnUrl = (route.query.returnUrl as string) || '/home'
+      router.replace(returnUrl)
+      return
+    }
+  } catch {
+    // API 失败也展示表单，让用户尝试
+  }
+  pageReady.value = true
+})
 
 const handleSetup = async () => {
   if (!pin.value) {
@@ -37,9 +56,11 @@ const handleSetup = async () => {
       verifyCiphertext: vaultStore.verifyCiphertext || ''
     })
 
+    // 更新 Pinia store，路由守卫据此放行
+    userStore.user!.keystoreSetup = true
     ElMessage.success({ message: '密码库初始化成功', plain: true })
     const returnUrl = (route.query.returnUrl as string) || '/home'
-    window.location.href = returnUrl
+    router.replace(returnUrl)
   } catch (error: unknown) {
     ElMessage.error({ message: error instanceof Error ? error.message : '初始化失败', plain: true })
   } finally {
@@ -56,7 +77,7 @@ const handleSetup = async () => {
         <p class="subtitle">设置 PIN 并下载密钥文件，用于加密保护您的账户数据</p>
       </div>
 
-      <el-form @submit.prevent="handleSetup" size="large">
+      <el-form v-if="pageReady" @submit.prevent="handleSetup" size="large">
         <el-form-item label="PIN" required>
           <el-input v-model="pin" type="password" placeholder="请设置一个易记的 PIN" show-password />
         </el-form-item>
