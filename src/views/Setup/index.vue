@@ -4,7 +4,8 @@ import { ElMessage } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import { useVaultStore } from '@/stores/modules/vault'
 import { useUserStore } from '@/stores/modules/user'
-import { setupKeystoreApi, getKdfConfigAndVerificationApi } from '@/services/keystore'
+import { setupKeystoreApi } from '@/services/keystore'
+import { getUserInfoApi } from '@/services/user'
 
 const pin = ref('')
 const loading = ref(false)
@@ -16,9 +17,9 @@ const route = useRoute()
 
 onMounted(async () => {
   try {
-    const res = await getKdfConfigAndVerificationApi()
-    if (res.data.exists) {
-      userStore.user!.keystoreSetup = true
+    const res = await getUserInfoApi()
+    userStore.setUser(res.data)
+    if (res.data.keystoreSetup) {
       const returnUrl = (route.query.returnUrl as string) || '/home'
       router.replace(returnUrl)
       return
