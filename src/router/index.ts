@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import { useUserStore } from '@/stores/modules/user'
-import { getKdfConfigAndVerificationApi } from '@/services/keystore'
 
 NProgress.configure({ showSpinner: false })
 
@@ -61,9 +60,6 @@ const router = createRouter({
   ]
 })
 
-let keystoreStatusChecked = false
-let hasKeystore = false
-
 router.beforeEach(async (to) => {
   NProgress.start()
   const userStore = useUserStore()
@@ -79,20 +75,8 @@ router.beforeEach(async (to) => {
       return '/home'
     }
 
-    // Keystore check (only once, skip on setup page itself)
-    if (!keystoreStatusChecked && to.path !== '/setup') {
-      try {
-        const res = await getKdfConfigAndVerificationApi()
-        hasKeystore = res.data.exists === true
-        keystoreStatusChecked = true
-      } catch {
-        hasKeystore = false
-        keystoreStatusChecked = true
-      }
-    }
-
-    // Redirect to setup if no keystore
-    if (!hasKeystore && !['/setup', '/logout'].includes(to.path)) {
+    // Redirect to setup if keystore not initialized
+    if (!userStore.user.keystoreSetup && !['/setup', '/logout', '/user-info'].includes(to.path)) {
       return { path: '/setup', query: { returnUrl: to.fullPath } }
     }
   }

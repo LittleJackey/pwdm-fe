@@ -71,15 +71,9 @@ const handleLogin = async () => {
     const res = await loginByPasswordApi(loginDto)
     userStore.setUser(res.data)
     ElMessage.success({ message: '登录成功', plain: true })
-    const { getKdfConfigAndVerificationApi } = await import('@/services/keystore')
-    try {
-      const kdfRes = await getKdfConfigAndVerificationApi()
-      if (kdfRes.data.exists === true) {
-        router.replace((route.query.returnUrl as string) || '/home')
-      } else {
-        router.replace('/setup')
-      }
-    } catch {
+    if (res.data.keystoreSetup) {
+      router.replace((route.query.returnUrl as string) || '/home')
+    } else {
       router.replace('/setup')
     }
   } catch (fields) {

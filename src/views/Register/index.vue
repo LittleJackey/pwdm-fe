@@ -26,16 +26,9 @@ const handleRegister = async () => {
     const res = await registerApi({ ...registerForm })
     userStore.setUser(res.data)
     ElMessage.success({ message: '注册成功', plain: true })
-    // 新用户无 keystore，直接跳转初始化
-    const { getKdfConfigAndVerificationApi } = await import('@/services/keystore')
-    try {
-      const kdfRes = await getKdfConfigAndVerificationApi()
-      if (kdfRes.data.exists === true) {
-        router.replace('/home')
-      } else {
-        router.replace('/setup')
-      }
-    } catch {
+    if (res.data.keystoreSetup) {
+      router.replace('/home')
+    } else {
       router.replace('/setup')
     }
   } catch {

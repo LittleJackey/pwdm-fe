@@ -10,6 +10,9 @@ export type User = {
 
   /* 创建时间 */
   createTime: Date
+
+  /* 是否已初始化密码库 */
+  keystoreSetup: boolean
 }
 
 export type LoginDTO = {
