@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Refresh, TrendCharts, CircleCheck, User, CircleClose, CopyDocument, InfoFilled, Clock } from '@element-plus/icons-vue'
+import {
+  Plus,
+  Refresh,
+  TrendCharts,
+  CircleCheck,
+  User,
+  CircleClose,
+  CopyDocument,
+  InfoFilled,
+  Clock
+} from '@element-plus/icons-vue'
 import { generateInviteApi, getInviteListApi, revokeInviteApi } from '@/services/invite'
 import type { InviteCodeVO } from '@/types/invite'
 
@@ -19,9 +29,23 @@ const stats = reactive({ total: 0, unused: 0, used: 0, revoked: 0 })
 
 const statCards = computed(() => [
   { key: 'total', label: '总计', value: stats.total, icon: TrendCharts, bg: 'rgba(59,130,246,0.12)', color: '#2563eb' },
-  { key: 'unused', label: '未使用', value: stats.unused, icon: CircleCheck, bg: 'rgba(34,197,94,0.12)', color: '#16a34a' },
+  {
+    key: 'unused',
+    label: '未使用',
+    value: stats.unused,
+    icon: CircleCheck,
+    bg: 'rgba(34,197,94,0.12)',
+    color: '#16a34a'
+  },
   { key: 'used', label: '已使用', value: stats.used, icon: User, bg: 'rgba(99,102,241,0.12)', color: '#4f46e5' },
-  { key: 'revoked', label: '已作废/过期', value: stats.revoked, icon: CircleClose, bg: 'rgba(156,163,175,0.12)', color: '#6b7280' }
+  {
+    key: 'revoked',
+    label: '已作废/过期',
+    value: stats.revoked,
+    icon: CircleClose,
+    bg: 'rgba(156,163,175,0.12)',
+    color: '#6b7280'
+  }
 ])
 
 const dialogVisible = ref(false)
@@ -30,10 +54,38 @@ const expiresTime = ref('')
 const generatedCode = ref('')
 
 const expireShortcuts = [
-  { text: '1天后', value: () => { const d = new Date(); d.setDate(d.getDate() + 1); return d } },
-  { text: '7天后', value: () => { const d = new Date(); d.setDate(d.getDate() + 7); return d } },
-  { text: '30天后', value: () => { const d = new Date(); d.setDate(d.getDate() + 30); return d } },
-  { text: '90天后', value: () => { const d = new Date(); d.setDate(d.getDate() + 90); return d } }
+  {
+    text: '1天后',
+    value: () => {
+      const d = new Date()
+      d.setDate(d.getDate() + 1)
+      return d
+    }
+  },
+  {
+    text: '7天后',
+    value: () => {
+      const d = new Date()
+      d.setDate(d.getDate() + 7)
+      return d
+    }
+  },
+  {
+    text: '30天后',
+    value: () => {
+      const d = new Date()
+      d.setDate(d.getDate() + 30)
+      return d
+    }
+  },
+  {
+    text: '90天后',
+    value: () => {
+      const d = new Date()
+      d.setDate(d.getDate() + 90)
+      return d
+    }
+  }
 ]
 
 const dateToValue = (d: Date) => {
@@ -62,7 +114,9 @@ const fetchStats = async () => {
     stats.unused = unusedRes.data.total
     stats.used = usedRes.data.total
     stats.revoked = expiredRes.data.total + revokedRes.data.total
-  } catch { /* stats are non-critical */ }
+  } catch {
+    /* stats are non-critical */
+  }
 }
 
 const fetchList = async () => {
@@ -111,11 +165,11 @@ const closeGenerateDialog = () => {
 
 const handleRevoke = async (row: InviteCodeVO) => {
   try {
-    await ElMessageBox.confirm(
-      `确认作废邀请码「${row.code}」吗？作废后该邀请码将无法再使用。`,
-      '确认作废',
-      { confirmButtonText: '确定作废', cancelButtonText: '取消', type: 'warning' }
-    )
+    await ElMessageBox.confirm(`确认作废邀请码「${row.code}」吗？作废后该邀请码将无法再使用。`, '确认作废', {
+      confirmButtonText: '确定作废',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
     await revokeInviteApi(row.id)
     ElMessage.success({ message: '已作废', plain: true })
     fetchList()
@@ -231,7 +285,7 @@ onMounted(() => {
                   <span class="clickable-text" @click="handleCopy(row.usedByUsername!)">{{ row.usedByUsername }}</span>
                 </el-tooltip>
                 <span class="uid-sep">·</span>
-                <el-tooltip :content="row.usedByUid!" placement="top">
+                <el-tooltip :content="`uid: ${row.usedByUid!}`" placement="top">
                   <span class="clickable-text uid-text" @click="handleCopy(row.usedByUid!)">{{ row.usedByUid }}</span>
                 </el-tooltip>
               </div>
@@ -245,8 +299,17 @@ onMounted(() => {
         <el-table-column label="操作" min-width="180" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-button size="small" class="btn-copy" :icon="CopyDocument" @click="handleCopy(row.code)">复制</el-button>
-              <el-button v-if="row.status === 0" size="small" class="btn-revoke" :icon="CircleClose" @click="handleRevoke(row)">作废</el-button>
+              <el-button size="small" class="btn-copy" :icon="CopyDocument" @click="handleCopy(row.code)"
+                >复制</el-button
+              >
+              <el-button
+                v-if="row.status === 0"
+                size="small"
+                class="btn-revoke"
+                :icon="CircleClose"
+                @click="handleRevoke(row)"
+                >作废</el-button
+              >
             </div>
           </template>
         </el-table-column>
@@ -296,13 +359,7 @@ onMounted(() => {
             >
               {{ s.text }}
             </button>
-            <button
-              class="chip"
-              :class="{ active: !expiresTime }"
-              @click="expiresTime = ''"
-            >
-              永久
-            </button>
+            <button class="chip" :class="{ active: !expiresTime }" @click="expiresTime = ''">永久</button>
           </div>
           <div class="custom-date-row">
             <span class="custom-label">自定义时间</span>
@@ -325,7 +382,9 @@ onMounted(() => {
           <div class="result-title">邀请码已生成</div>
           <div class="result-code-box">
             <code class="result-code">{{ generatedCode }}</code>
-            <el-button class="btn-copy" :icon="CopyDocument" size="small" @click="handleCopy(generatedCode)">复制</el-button>
+            <el-button class="btn-copy" :icon="CopyDocument" size="small" @click="handleCopy(generatedCode)"
+              >复制</el-button
+            >
           </div>
           <div class="result-meta">
             <el-icon><Clock /></el-icon>
@@ -373,7 +432,9 @@ onMounted(() => {
   box-shadow:
     0 2px 12px rgba(0, 0, 0, 0.04),
     0 0 0 1px rgba(0, 0, 0, 0.03);
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
 
   &:hover {
     box-shadow:
@@ -544,7 +605,9 @@ onMounted(() => {
   cursor: pointer;
   border-bottom: 1.5px dashed #d1d5db;
   padding-bottom: 2px;
-  transition: color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 
   &:hover {
     color: #2563eb;
@@ -558,7 +621,9 @@ onMounted(() => {
   color: #9ca3af;
   margin-left: 4px;
 
-  &:hover { color: #2563eb; }
+  &:hover {
+    color: #2563eb;
+  }
 }
 
 :deep(.el-table__row:hover) .code-copy-btn {
@@ -578,20 +643,36 @@ onMounted(() => {
   border-radius: 50%;
   flex-shrink: 0;
 
-  &--0 { background-color: #22c55e; }
-  &--1 { background-color: #3b82f6; }
-  &--2 { background-color: #9ca3af; }
-  &--3 { background-color: #ef4444; }
+  &--0 {
+    background-color: #22c55e;
+  }
+  &--1 {
+    background-color: #3b82f6;
+  }
+  &--2 {
+    background-color: #9ca3af;
+  }
+  &--3 {
+    background-color: #ef4444;
+  }
 }
 
 .status-text {
   font-size: 13px;
   font-weight: 500;
 
-  &--0 { color: #15803d; }
-  &--1 { color: #1d4ed8; }
-  &--2 { color: #6b7280; }
-  &--3 { color: #b91c1c; }
+  &--0 {
+    color: #15803d;
+  }
+  &--1 {
+    color: #1d4ed8;
+  }
+  &--2 {
+    color: #6b7280;
+  }
+  &--3 {
+    color: #b91c1c;
+  }
 }
 
 // ── Time Columns ──
@@ -619,7 +700,9 @@ onMounted(() => {
   cursor: pointer;
   border-bottom: 1.5px dashed #d1d5db;
   padding-bottom: 2px;
-  transition: color 0.2s, border-color 0.2s;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
 
   &:hover {
     color: #2563eb;
@@ -716,7 +799,10 @@ onMounted(() => {
   color: #374151;
   margin-bottom: 12px;
 
-  .el-icon { font-size: 15px; color: #6b7280; }
+  .el-icon {
+    font-size: 15px;
+    color: #6b7280;
+  }
 }
 
 .duration-chips {
@@ -821,7 +907,9 @@ onMounted(() => {
   font-size: 13px;
   color: #6b7280;
 
-  .el-icon { font-size: 14px; }
+  .el-icon {
+    font-size: 14px;
+  }
 }
 
 :deep(.el-picker-panel__link-btn) {
