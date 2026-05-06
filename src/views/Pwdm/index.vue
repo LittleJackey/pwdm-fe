@@ -2,23 +2,12 @@
 import { accountPageQueryApi, deleteAccountApi, deleteBatchAccountApi } from '@/services/account'
 import type { AccountPageQueryDTO, AccountVO } from '@/types/account'
 import { fillPaginationParams, fillSortParams } from '@/utils/common'
-import {
-  dayjs,
-  ElMessage,
-  ElMessageBox,
-  type FormInstance,
-  type Sort,
-  type UploadFile,
-  type UploadInstance,
-  type UploadUserFile
-} from 'element-plus'
-import { computed, onBeforeMount, onMounted, reactive, ref, watch } from 'vue'
+import { dayjs, ElMessage, ElMessageBox, type FormInstance, type Sort } from 'element-plus'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import AccountFormModal from './components/AccountFormModal.vue'
 import AccountDescription from './components/AccountDescription.vue'
 import DecryptKeyDialog from './components/DecryptKeyDialog.vue'
-import { useRsaStore } from '@/stores/modules/rsa'
-import { useUserStore } from '@/stores/modules/user'
-import { useRouter } from 'vue-router'
+import { useVaultStore } from '@/stores/modules/vault'
 
 const searchFormRef = ref<FormInstance>()
 const dataList = ref<AccountVO[]>([])
@@ -191,7 +180,7 @@ const opType = ref<'add' | 'update'>('add')
 const modalVisible = ref(false)
 const opRow = ref<AccountVO>()
 const openDialog = async (type: 'add' | 'update', row?: AccountVO) => {
-  if (await checkAndRequestRsaPrivateKey()) {
+  if (await checkAndRequestMasterKey()) {
     // 用户操作成功，继续执行
     opType.value = type
     opRow.value = row
@@ -199,11 +188,10 @@ const openDialog = async (type: 'add' | 'update', row?: AccountVO) => {
   }
 }
 
-const checkAndRequestRsaPrivateKey = async () => {
-  if (!rsaStore.isKeyValidAndMatched) {
-    decryptKeyDialogTitle.value = '需要RSA私钥'
-    decryptKeyDialogMessage.value = '该需要先传入RSA私钥'
-    decryptKeyDialogVisible.value = true
+const vaultStore = useVaultStore()
+const checkAndRequestMasterKey = async () => {
+  if (!vaultStore.isUnlocked) {
+    masterKeyDialogVisible.value = true
 
     // 等待用户操作完成
     const success = await waitForUserAction()
@@ -213,7 +201,7 @@ const checkAndRequestRsaPrivateKey = async () => {
       return false
     }
   }
-  return true
+  return vaultStore.isUnlocked
 }
 
 // 创建一个 Promise 来等待用户操作
@@ -221,11 +209,11 @@ const waitForUserAction = (): Promise<boolean> => {
   return new Promise((resolve) => {
     // 监听对话框的关闭事件
     const unwatch = watch(
-      () => decryptKeyDialogVisible.value,
+      () => masterKeyDialogVisible.value,
       (visible) => {
         if (!visible) {
           // 对话框关闭后，检查私钥是否正确
-          if (rsaStore.isKeyValidAndMatched) {
+          if (vaultStore.isUnlocked) {
             resolve(true) // 用户操作成功
           } else {
             resolve(false) // 用户取消或失败
@@ -239,7 +227,7 @@ const waitForUserAction = (): Promise<boolean> => {
 }
 
 const handleDeleteAccount = async (id: number, index: number) => {
-  if (await checkAndRequestRsaPrivateKey()) {
+  if (await checkAndRequestMasterKey()) {
     ElMessageBox.confirm(`确认删除序号为${index}的记录吗?`, '提示', {
       type: 'warning'
     })
@@ -255,7 +243,7 @@ const handleDeleteAccount = async (id: number, index: number) => {
 }
 
 const handleBatchDeleteAccount = async () => {
-  if (await checkAndRequestRsaPrivateKey()) {
+  if (await checkAndRequestMasterKey()) {
     // 或者直接使用
     const ids = multipleSelection.value.map((item) => item.id)
 
@@ -283,76 +271,7 @@ const batchDeleteDisabled = computed(() => {
   return multipleSelection.value.length <= 0
 })
 
-const uploadRef = ref<UploadInstance>()
-const fileList = ref<UploadUserFile[]>([])
-const showUploader = ref(true) // 控制上传组件显隐
-
-const afterManualSubmit = () => {
-  if (rsaStore.isKeyValidAndMatched) {
-    showUploader.value = false
-    fileList.value = [{ name: '来自手动输入', url: '', uid: Date.now() }]
-  }
-}
-
-const decryptKeyDialogVisible = ref(false)
-const decryptKeyDialogTitle = ref('')
-const decryptKeyDialogMessage = ref('')
-
-const rsaStore = useRsaStore()
-
-// 文件状态改变时的钩子（添加文件、上传成功/失败都会触发）
-const handleFileChange = (uploadFile: UploadFile) => {
-  // 1. 获取原生的 File 对象
-  const rawFile = uploadFile.raw
-  if (!rawFile) {
-    return
-  }
-
-  // 2. 简单的校验
-  if (!rawFile.name.endsWith('.pem')) {
-    ElMessage.error('请上传 .pem 格式的文件')
-    // 清理掉不符合的文件
-    uploadRef.value?.clearFiles()
-    return
-  }
-
-  // 3. 使用 FileReader 读取文件内容
-  const reader = new FileReader()
-
-  // 读取成功的回调
-  reader.onload = (e) => {
-    decryptKeyDialogVisible.value = false
-    if (e.target?.result && typeof e.target.result === 'string') {
-      // 成功获取字符串内容
-      try {
-        rsaStore.setPrivateKeyPemContent(e.target.result)
-        fileList.value = [{ name: rawFile.name, url: '', uid: rawFile.uid }]
-        showUploader.value = false // 隐藏上传组件
-        ElMessage.success({ message: `${rawFile.name} 上传成功`, plain: true })
-      } catch (e) {
-        return ElMessage.error({ message: (e as Error).message || '无效的私钥', plain: true })
-      }
-    }
-  }
-  // 读取失败的回调
-  reader.onerror = () => ElMessage.error({ message: '文件读取失败', plain: true })
-
-  // 开始以文本形式读取
-  // 因为这是一个异步的过程。代码的逻辑顺序必须是： 先告诉它“读完之后干什么”，然后再命令它“开始读”
-  reader.readAsText(rawFile)
-}
-
-// 暴露给子组件的方法
-const triggerUpload = () => {
-  // 触发上传组件的点击事件
-  uploadRef.value?.$el?.querySelector('.el-upload__input')?.click()
-}
-
-const handleRemoveFile = () => {
-  rsaStore.clearPrivateKey()
-  fileList.value = []
-  showUploader.value = true // 显示上传组件
-}
+const masterKeyDialogVisible = ref(false)
 
 const showAdvanced = ref(false)
 
@@ -414,116 +333,96 @@ const formatDateRange = (start: string | undefined, end: string | undefined) => 
   return `${dayjs(start).format('YYYY-MM-DD HH:mm')} ~ ${dayjs(end).format('YYYY-MM-DD HH:mm')}`
 }
 
-const userStore = useUserStore()
-const router = useRouter()
-
-onBeforeMount(() => {
-  const userStore = useUserStore()
-  if (!userStore.user?.isRsaGenerated) {
-    ElMessageBox.confirm('请先设置RSA秘钥', '提示', {
-      confirmButtonText: '去设置',
-      type: 'error'
-    })
-      .then(() => {
-        router.push('/home')
-      })
-      .catch(() => {
-        router.push('/home')
-      })
-  }
-})
+const handleUnlock = () => {
+  masterKeyDialogVisible.value = true
+}
+const handleLock = async () => {
+  await vaultStore.lock()
+  ElMessage.success({ message: '锁定成功', plain: true })
+}
 
 onMounted(() => {
   getAccountPageList()
-  rsaStore.publicKeyPemContent = userStore.user!.rsaPublicKey
 })
 </script>
 
 <template>
-  <div>
-    <div>
-      <el-form
-        ref="searchFormRef"
-        :inline="true"
-        :model="accountPageQueryForm"
-        class="search-form bg-bg_color w-[99/100] pl-8 pt-[12px]"
-      >
-        <el-form-item label="网站名" prop="website">
-          <el-input
-            v-model="accountPageQueryForm.website"
-            placeholder="请输入网站名"
-            clearable
-            class="!w-[200px]"
-            @change="onSearch"
-          />
-        </el-form-item>
-        <el-form-item label="url" prop="url">
-          <el-input
-            v-model="accountPageQueryForm.url"
-            placeholder="请输入网站url"
-            clearable
-            class="!w-[200px]"
-            @change="onSearch"
-          />
-        </el-form-item>
-        <el-form-item label="用户名" prop="username">
-          <el-input
-            v-model="accountPageQueryForm.username"
-            placeholder="请输入用户名"
-            clearable
-            class="!w-[200px]"
-            @change="onSearch"
-          />
-        </el-form-item>
-
-        <el-form-item label="手机" prop="phone">
-          <el-input
-            v-model="accountPageQueryForm.phone"
-            placeholder="请输入手机"
-            clearable
-            class="!w-[200px]"
-            @change="onSearch"
-          />
-        </el-form-item>
-
-        <el-form-item label="邮箱" prop="email">
-          <el-input
-            v-model="accountPageQueryForm.email"
-            placeholder="请输入邮箱"
-            clearable
-            class="!w-[200px]"
-            @change="onSearch"
-          />
-        </el-form-item>
-
-        <el-form-item label="备注" prop="notes">
-          <el-input
-            v-model="accountPageQueryForm.notes"
-            placeholder="请输入备注"
-            clearable
-            class="!w-[200px]"
-            @change="onSearch"
-          />
-        </el-form-item>
-
-        <div>
-          <el-button type="primary" link @click="showAdvanced = !showAdvanced">
-            {{ showAdvanced ? '收起' : '更多筛选' }}
-            <el-badge
-              v-if="advancedFilledCount > 0"
-              :value="advancedFilledCount"
-              :max="99"
-              type="primary"
-              class="ml-1"
+  <div class="pwdm-page">
+    <div class="search-card">
+      <el-form ref="searchFormRef" :model="accountPageQueryForm">
+        <div class="search-fields">
+          <el-form-item label="网站名" prop="website">
+            <el-input
+              v-model="accountPageQueryForm.website"
+              placeholder="请输入网站名"
+              clearable
+              style="width: 200px"
+              @keyup.enter="onSearch"
+              @clear="onSearch"
             />
-            <el-icon class="ml-1">
+          </el-form-item>
+          <el-form-item label="url" prop="url">
+            <el-input
+              v-model="accountPageQueryForm.url"
+              placeholder="请输入网站url"
+              clearable
+              style="width: 300px"
+              @keyup.enter="onSearch"
+              @clear="onSearch"
+            />
+          </el-form-item>
+          <el-form-item label="用户名" prop="username">
+            <el-input
+              v-model="accountPageQueryForm.username"
+              placeholder="请输入用户名"
+              clearable
+              style="width: 200px"
+              @keyup.enter="onSearch"
+              @clear="onSearch"
+            />
+          </el-form-item>
+          <el-form-item label="手机" prop="phone">
+            <el-input
+              v-model="accountPageQueryForm.phone"
+              placeholder="请输入手机"
+              clearable
+              style="width: 200px"
+              @keyup.enter="onSearch"
+              @clear="onSearch"
+            />
+          </el-form-item>
+          <el-form-item label="邮箱" prop="email">
+            <el-input
+              v-model="accountPageQueryForm.email"
+              placeholder="请输入邮箱"
+              clearable
+              style="width: 200px"
+              @keyup.enter="onSearch"
+              @clear="onSearch"
+            />
+          </el-form-item>
+          <el-form-item label="备注" prop="notes">
+            <el-input
+              v-model="accountPageQueryForm.notes"
+              placeholder="请输入备注"
+              clearable
+              style="width: 200px"
+              @keyup.enter="onSearch"
+              @clear="onSearch"
+            />
+          </el-form-item>
+        </div>
+
+        <div class="search-toggle">
+          <el-button type="primary" link @click="showAdvanced = !showAdvanced">
+            {{ showAdvanced ? '收起筛选' : '更多筛选' }}
+            <el-icon>
               <ArrowDown v-if="!showAdvanced" />
               <ArrowUp v-else />
             </el-icon>
           </el-button>
           <template v-if="!showAdvanced && advancedFilledCount > 0">
             <el-button type="primary" link size="small" @click="clearAllAdvanced"> 清空全部 </el-button>
-
             <el-tag
               v-if="accountPageQueryForm.nickname?.trim()"
               size="small"
@@ -598,120 +497,105 @@ onMounted(() => {
         </div>
 
         <el-collapse-transition>
-          <div v-show="showAdvanced" class="advanced-search">
-            <el-form-item label="昵称" prop="nickname">
-              <el-input
-                v-model="accountPageQueryForm.nickname"
-                placeholder="请输入昵称"
-                clearable
-                class="!w-[200px]"
-                @change="onSearch"
-              />
-            </el-form-item>
-
-            <el-form-item label="账号拥有者" prop="owner">
-              <el-input
-                v-model="accountPageQueryForm.owner"
-                placeholder="请输入账号拥有者"
-                clearable
-                class="!w-[200px]"
-                @change="onSearch"
-              />
-            </el-form-item>
-
-            <el-form-item label="第二邮箱" prop="secEmail">
-              <el-input
-                v-model="accountPageQueryForm.secEmail"
-                placeholder="请输入第二邮箱"
-                clearable
-                class="!w-[200px]"
-                @change="onSearch"
-              />
-            </el-form-item>
-
-            <el-form-item label="二次验证服务商" prop="mfaProvider">
-              <el-input
-                v-model="accountPageQueryForm.mfaProvider"
-                placeholder="请输入二次验证服务商"
-                clearable
-                class="!w-[200px]"
-                @change="onSearch"
-              />
-            </el-form-item>
-
-            <el-form-item label="创建时间">
-              <el-date-picker
-                v-model="createTimeRange"
-                class="!w-[360px]"
-                format="YYYY-MM-DD HH:mm:ss"
-                date-format="YYYY-MM-DD ddd"
-                time-format="A hh:mm:ss"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                type="datetimerange"
-                :shortcuts="shortcuts"
-                range-separator="-"
-                start-placeholder="开始时间"
-                end-placeholder="结束时间"
-                @change="onSearch"
-              />
-            </el-form-item>
-            <el-form-item label="修改时间">
-              <el-date-picker
-                v-model="updateTimeRange"
-                class="!w-[360px]"
-                format="YYYY-MM-DD HH:mm:ss"
-                date-format="YYYY-MM-DD ddd"
-                time-format="A hh:mm:ss"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                type="datetimerange"
-                :shortcuts="shortcuts"
-                range-separator="-"
-                start-placeholder="开始时间"
-                end-placeholder="结束时间"
-                @change="onSearch"
-              />
-            </el-form-item>
+          <div v-show="showAdvanced" class="advanced-search-wrap">
+            <div class="advanced-search">
+              <el-form-item label="昵称" prop="nickname">
+                <el-input
+                  v-model="accountPageQueryForm.nickname"
+                  placeholder="请输入昵称"
+                  clearable
+                  style="width: 200px"
+                  @keyup.enter="onSearch"
+                  @clear="onSearch"
+                />
+              </el-form-item>
+              <el-form-item label="账号拥有者" prop="owner">
+                <el-input
+                  v-model="accountPageQueryForm.owner"
+                  placeholder="请输入账号拥有者"
+                  clearable
+                  style="width: 200px"
+                  @keyup.enter="onSearch"
+                  @clear="onSearch"
+                />
+              </el-form-item>
+              <el-form-item label="第二邮箱" prop="secEmail">
+                <el-input
+                  v-model="accountPageQueryForm.secEmail"
+                  placeholder="请输入第二邮箱"
+                  clearable
+                  style="width: 200px"
+                  @keyup.enter="onSearch"
+                  @clear="onSearch"
+                />
+              </el-form-item>
+              <el-form-item label="二次验证服务商" prop="mfaProvider">
+                <el-input
+                  v-model="accountPageQueryForm.mfaProvider"
+                  placeholder="请输入二次验证服务商"
+                  clearable
+                  style="width: 200px"
+                  @keyup.enter="onSearch"
+                  @clear="onSearch"
+                />
+              </el-form-item>
+              <el-form-item label="创建时间">
+                <el-date-picker
+                  v-model="createTimeRange"
+                  style="width: 360px"
+                  format="YYYY-MM-DD HH:mm:ss"
+                  date-format="YYYY-MM-DD ddd"
+                  time-format="A hh:mm:ss"
+                  value-format="YYYY-MM-DD HH:mm:ss"
+                  type="datetimerange"
+                  :shortcuts="shortcuts"
+                  range-separator="-"
+                  start-placeholder="开始时间"
+                  end-placeholder="结束时间"
+                  @change="onSearch"
+                />
+              </el-form-item>
+              <el-form-item label="修改时间">
+                <el-date-picker
+                  v-model="updateTimeRange"
+                  style="width: 360px"
+                  format="YYYY-MM-DD HH:mm:ss"
+                  date-format="YYYY-MM-DD ddd"
+                  time-format="A hh:mm:ss"
+                  value-format="YYYY-MM-DD HH:mm:ss"
+                  type="datetimerange"
+                  :shortcuts="shortcuts"
+                  range-separator="-"
+                  start-placeholder="开始时间"
+                  end-placeholder="结束时间"
+                  @change="onSearch"
+                />
+              </el-form-item>
+            </div>
           </div>
         </el-collapse-transition>
 
-        <el-form-item>
+        <div class="search-actions">
           <el-button type="primary" :loading="pageLoading" @click="onSearch"> 搜索 </el-button>
           <el-button @click="resetForm(searchFormRef)"> 重置 </el-button>
-        </el-form-item>
+        </div>
       </el-form>
     </div>
-    <div>
-      <div>
-        <el-button type="primary" @click="openDialog('add')"> 新增 </el-button>
-        <el-button type="danger" :disabled="batchDeleteDisabled" @click="handleBatchDeleteAccount">
-          批量删除
-        </el-button>
-      </div>
-      <div>
-        <div v-if="showUploader">
-          <el-upload
-            ref="uploadRef"
-            action="#"
-            :auto-upload="false"
-            :on-change="handleFileChange"
-            :on-remove="handleRemoveFile"
-            :show-file-list="false"
-            accept=".pem"
-            drag
-            :limit="1"
-          >
-            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-            <div class="el-upload__text">拖拽rsa私钥文件(.pem)到此或 <em>点击上传</em></div>
-          </el-upload>
-        </div>
-        <div v-else>
-          <el-tag closable @close="handleRemoveFile">
-            {{ fileList[0]?.name }}
-          </el-tag>
+    <div class="table-card">
+      <div class="action-bar">
+        <div class="action-bar-left">
+          <el-button v-if="vaultStore.isUnlocked" class="btn-lock" @click="handleLock"> 锁定主秘钥 </el-button>
+          <el-button v-else class="btn-unlock" @click="handleUnlock"> 解锁主秘钥 </el-button>
+          <el-button type="primary" @click="openDialog('add')"> 新增 </el-button>
+          <el-button type="danger" :disabled="batchDeleteDisabled" @click="handleBatchDeleteAccount">
+            批量删除
+          </el-button>
         </div>
       </div>
+
       <el-table
         :data="dataList"
+        stripe
         style="width: 100%"
         row-key="id"
         :loading="pageLoading"
@@ -722,20 +606,16 @@ onMounted(() => {
           <template #default="{ row, $index }">
             <account-description
               :row="row"
-              v-model:decrypt-key-dialog-visible="decryptKeyDialogVisible"
-              v-model:decrypt-key-dialog-title="decryptKeyDialogTitle"
-              v-model:decrypt-key-dialog-message="decryptKeyDialogMessage"
-              @trigger-upload="triggerUpload"
-              :on-remove="handleRemoveFile"
+              :check-and-request-master-key="checkAndRequestMasterKey"
+              @edit="(row) => openDialog('update', row)"
+              @delete="(id) => handleDeleteAccount(id, $index + 1)"
             />
-            <el-button type="primary" @click="openDialog('update', row)"> 编辑 </el-button>
-            <el-button type="danger" @click="handleDeleteAccount(row.id, $index + 1)"> 删除 </el-button>
           </template>
         </el-table-column>
 
         <el-table-column type="selection" min-width="55" />
         <el-table-column type="index" label="序号" min-width="80" />
-        <el-table-column prop="website" label="网站" min-width="120" />
+        <el-table-column prop="website" label="网站名" min-width="120" />
         <el-table-column prop="url" label="URL" show-overflow-tooltip min-width="220">
           <template #default="{ row }">
             <el-link type="primary" :href="row.url" target="_blank" underline="hover">
@@ -750,35 +630,194 @@ onMounted(() => {
         <el-table-column prop="owner" label="拥有者" min-width="120" />
         <el-table-column prop="notes" label="备注" show-overflow-tooltip min-width="180" />
         <el-table-column prop="createTime" sortable label="创建时间" v-if="createTimeRange" min-width="180" />
-        <el-table-column prop="updateTime" label="修改时间" min-width="180" />
+        <el-table-column prop="updateTime" label="修改时间" min-width="180" sortable />
         <el-table-column fixed="right" label="操作" min-width="120">
           <template #default="{ row, $index }">
-            <el-button type="primary" link @click="openDialog('update', row)"> 编辑 </el-button>
+            <el-button type="primary" link @click="openDialog('update', row)" @success="getAccountPageList">
+              编辑
+            </el-button>
             <el-button type="danger" link @click="handleDeleteAccount(row.id, $index + 1)"> 删除 </el-button>
           </template>
         </el-table-column>
       </el-table>
-    </div>
-    <div>
-      <el-pagination
-        v-model:current-page="pagination.currentPage"
-        v-model:page-size="pagination.pageSize"
-        :page-sizes="[10, 20]"
-        layout="total,sizes, prev, pager, next"
-        :total="pagination.total"
-        @size-change="getAccountPageList"
-        @current-change="getAccountPageList"
-      />
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="pagination.currentPage"
+          v-model:page-size="pagination.pageSize"
+          :page-sizes="[10, 20]"
+          layout="total,sizes, prev, pager, next"
+          :total="pagination.total"
+          @size-change="getAccountPageList"
+          @current-change="getAccountPageList"
+        />
+      </div>
     </div>
     <account-form-modal v-model="modalVisible" :type="opType" :row="opRow" @success="getAccountPageList" />
-    <decrypt-key-dialog
-      v-model="decryptKeyDialogVisible"
-      :after-manual-submit="afterManualSubmit"
-      :handle-upload="triggerUpload"
-      :title="decryptKeyDialogTitle"
-      :message="decryptKeyDialogMessage"
-    />
+    <decrypt-key-dialog v-model="masterKeyDialogVisible" />
   </div>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.pwdm-page {
+  background-color: #f7f8fa;
+  min-height: 100%;
+  padding: 20px;
+}
+
+.search-card,
+.table-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+.search-card {
+  margin-bottom: 20px;
+}
+
+.table-card {
+  margin-bottom: 20px;
+}
+
+.search-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-fields :deep(.el-form-item) {
+  margin-right: 20px;
+  margin-bottom: 0;
+}
+
+.search-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+
+.advanced-search-wrap {
+  overflow: hidden;
+}
+
+.advanced-search {
+  padding: 16px;
+  background: #fafbfc;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.advanced-search :deep(.el-form-item) {
+  margin-right: 20px;
+  margin-bottom: 4px;
+}
+
+.search-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.action-bar-left {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid #f0f1f3;
+  margin-top: 16px;
+}
+
+/* --- El-table refinements --- */
+:deep(.el-table) {
+  --el-table-border-color: transparent;
+  --el-table-header-bg-color: #fafbfc;
+
+  border-radius: 8px;
+  overflow: hidden;
+
+  .el-table__header th {
+    font-weight: 600;
+    font-size: 13px;
+    color: #6b7280;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid #f0f1f3;
+  }
+
+  .el-table__body td {
+    border-bottom: 1px solid #f5f5f5;
+  }
+
+  .el-table__expand-icon {
+    color: #909399;
+
+    &.el-table__expand-icon--expanded {
+      color: #303133;
+    }
+  }
+
+  .el-table__expanded-cell {
+    padding: 12px 24px 20px 24px !important;
+    background: #fafbfc;
+  }
+}
+
+/* --- El-pagination refinements --- */
+:deep(.el-pagination) {
+  .el-pager li {
+    border-radius: 6px;
+    font-weight: 500;
+  }
+
+  .btn-prev,
+  .btn-next {
+    border-radius: 6px;
+  }
+}
+
+/* --- El-button refinements --- */
+:deep(.el-button) {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* --- Lock/unlock buttons --- */
+.btn-lock {
+  --el-button-border-color: #22c55e;
+  --el-button-text-color: #16a34a;
+  --el-button-bg-color: rgba(34, 197, 94, 0.12);
+  --el-button-hover-border-color: #16a34a;
+  --el-button-hover-text-color: #15803d;
+  --el-button-hover-bg-color: rgba(34, 197, 94, 0.2);
+  border-width: 1.5px;
+  font-weight: 600;
+}
+
+.btn-unlock {
+  --el-button-border-color: #f59e0b;
+  --el-button-text-color: #d97706;
+  --el-button-bg-color: rgba(245, 158, 11, 0.12);
+  --el-button-hover-border-color: #d97706;
+  --el-button-hover-text-color: #b45309;
+  --el-button-hover-bg-color: rgba(245, 158, 11, 0.2);
+  border-width: 1.5px;
+  font-weight: 600;
+}
+</style>

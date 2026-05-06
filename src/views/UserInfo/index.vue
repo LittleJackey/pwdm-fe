@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { encodePassword, updateMyProfileApi } from '@/services/user'
+import { updateMyProfileApi } from '@/services/user'
 import { useUserStore } from '@/stores/modules/user'
 import type { UserUpdateDTO } from '@/types/user'
 import { request } from '@/utils/request'
@@ -34,8 +34,7 @@ const handleUpdateMyProfile = async () => {
     await formRef.value!.validate()
 
     const userUpdateDTO: UserUpdateDTO = {
-      ...form,
-      password: encodePassword(form.password)
+      ...form
     }
     await updateMyProfileApi(userUpdateDTO)
     ElMessage.success({ message: '修改成功', plain: true })

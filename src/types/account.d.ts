@@ -66,6 +66,9 @@ export type AccountVO = {
   /** 昵称 */
   nickname: string
 
+  /** 密码iv, Base64 编码的 12 字节 IV */
+  pwdIv: string
+
   /** 账户密码(加密存储) */
   password: string
 
@@ -87,23 +90,44 @@ export type AccountVO = {
   /** 二次验证服务商(如Google Auth等) */
   mfaProvider: string
 
+  /** 恢复代码iv, Base64 编码的 12 字节 IV */
+  recoveryCodesIv: string
+
   /** 恢复代码(加密存储) */
   recoveryCodes: string
+
+  /** 安全问题1iv, Base64 编码的 12 字节 IV */
+  sq1Iv: string
 
   /** 安全问题1(加密存储) */
   securityQuestion1: string
 
+  /** 安全答案1iv, Base64 编码的 12 字节 IV */
+  sa1Iv: string
+
   /** 安全答案1(加密存储) */
   securityAnswer1: string
+
+  /** 安全问题2iv, Base64 编码的 12 字节 IV */
+  sq2Iv: string
 
   /** 安全问题2(加密存储) */
   securityQuestion2: string
 
+  /** 安全答案2iv, Base64 编码的 12 字节 IV */
+  sa2Iv: string
+
   /** 安全答案2(加密存储) */
   securityAnswer2: string
 
+  /** 安全问题3iv, Base64 编码的 12 字节 IV */
+  sq3Iv: string
+
   /** 安全问题3(加密存储) */
   securityQuestion3: string
+
+  /** 安全答案3iv, Base64 编码的 12 字节 IV */
+  sa3Iv: string
 
   /** 安全答案3(加密存储) */
   securityAnswer3: string
@@ -131,6 +155,9 @@ export type AddAccountDTO = {
   /** 昵称 */
   nickname?: string
 
+  /** 密码iv, Base64 编码的 12 字节 IV */
+  pwdIv: string
+
   /** 账户密码(加密存储) */
   password: string
 
@@ -152,23 +179,44 @@ export type AddAccountDTO = {
   /** 二次验证服务商(如Google Auth等) */
   mfaProvider?: string
 
+  /** 恢复代码iv, Base64 编码的 12 字节 IV */
+  recoveryCodesIv?: string
+
   /** 恢复代码(加密存储) */
   recoveryCodes?: string
+
+  /** 安全问题1iv, Base64 编码的 12 字节 IV */
+  sq1Iv?: string
 
   /** 安全问题1(加密存储) */
   securityQuestion1?: string
 
+  /** 安全答案1iv, Base64 编码的 12 字节 IV */
+  sa1Iv?: string
+
   /** 安全答案1(加密存储) */
   securityAnswer1?: string
+
+  /** 安全问题2iv, Base64 编码的 12 字节 IV */
+  sq2Iv?: string
 
   /** 安全问题2(加密存储) */
   securityQuestion2?: string
 
+  /** 安全答案2iv, Base64 编码的 12 字节 IV */
+  sa2Iv?: string
+
   /** 安全答案2(加密存储) */
   securityAnswer2?: string
 
+  /** 安全问题3iv, Base64 编码的 12 字节 IV */
+  sq3Iv?: string
+
   /** 安全问题3(加密存储) */
   securityQuestion3?: string
+
+  /** 安全答案3iv, Base64 编码的 12 字节 IV */
+  sa3Iv?: string
 
   /** 安全答案3(加密存储) */
   securityAnswer3?: string
@@ -196,6 +244,9 @@ export type UpdateAccountDTO = {
   /** 昵称 */
   nickname?: string
 
+  /** 密码iv, Base64 编码的 12 字节 IV */
+  pwdIv: string
+
   /** 账户密码(加密存储) */
   password: string
 
@@ -220,24 +271,42 @@ export type UpdateAccountDTO = {
   /** 恢复代码(加密存储) */
   recoveryCodes?: string
 
+  /** 恢复代码iv, Base64 编码的 12 字节 IV */
+  recoveryCodesIv?: string
+
   /** 安全问题1(加密存储) */
   securityQuestion1?: string
+
+  /** 安全问题1iv, Base64 编码的 12 字节 IV */
+  sq1Iv?: string
 
   /** 安全答案1(加密存储) */
   securityAnswer1?: string
 
+  /** 安全答案1iv, Base64 编码的 12 字节 IV */
+  sa1Iv?: string
+
   /** 安全问题2(加密存储) */
   securityQuestion2?: string
+
+  /** 安全问题2iv, Base64 编码的 12 字节 IV */
+  sq2Iv?: string
 
   /** 安全答案2(加密存储) */
   securityAnswer2?: string
 
+  /** 安全答案2iv, Base64 编码的 12 字节 IV */
+  sa2Iv?: string
+
   /** 安全问题3(加密存储) */
   securityQuestion3?: string
+
+  /** 安全问题3iv, Base64 编码的 12 字节 IV */
+  sq3Iv?: string
 
   /** 安全答案3(加密存储) */
   securityAnswer3?: string
 
-  /** rsa 签名,(原始数据为user.uid) */
-  signature: string
+  /** 安全答案3iv, Base64 编码的 12 字节 IV */
+  sa3Iv?: string
 }

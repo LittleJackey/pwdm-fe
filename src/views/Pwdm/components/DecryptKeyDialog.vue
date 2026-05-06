@@ -1,27 +1,17 @@
 <script setup lang="ts">
-import { useRsaStore } from '@/stores/modules/rsa'
-import { ElMessage } from 'element-plus'
+import { useVaultStore } from '@/stores/modules/vault'
+import { ElForm, ElMessage, type UploadFile, type UploadInstance } from 'element-plus'
 import { computed, ref } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    // 是否显示对话框
-    modelValue: boolean
-    // 标题
-    title?: string
-    // 主提示信息
-    message?: string
-    // 副提示信息
-    subMessage?: string
-    handleUpload: () => void
-    afterManualSubmit: () => void
-  }>(),
-  {
-    title: '需要密钥解密',
-    message: '此内容已加密，需要密钥才能解密',
-    subMessage: '请上传密钥文件或手动输入密钥内容'
-  }
-)
+const props = defineProps<{
+  // 是否显示对话框
+  modelValue: boolean
+}>()
+
+// 标题
+const title = '解锁'
+// 主提示信息
+const message = '需要 PIN 和 秘钥文件'
 
 const emits = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
@@ -34,63 +24,274 @@ const visible = computed({
   }
 })
 
-const handleClose = () => {
-  showManualInput.value = false
-  manualKey.value = ''
-  visible.value = false
-}
+const showPinInput = ref(false)
+const pin = ref('')
+const vaultStore = useVaultStore()
 
-const showManualInput = ref(false)
-const manualKey = ref('')
-const rsaStore = useRsaStore()
-const handleManualSubmit = () => {
+// 解锁主密码中
+const unlocking = ref(false)
+const handleUnlock = async () => {
+  // 校验 PIN 和 秘钥文件已输入
+  if (!pin.value) {
+    ElMessage.error({ message: '请输入PIN', plain: true })
+    return
+  }
+
+  // 获取原生 File 对象
+  const rawFile = fileList.value[0]?.raw
+  if (!rawFile) {
+    ElMessage.error({ message: '秘钥文件无效，请重新选择', plain: true })
+    return
+  }
+
+  unlocking.value = true
+
   try {
-    rsaStore.setPrivateKeyPemContent(manualKey.value)
+    await vaultStore.unlock(pin.value, rawFile) // 传入 pin 和 File 对象
+    console.log('解锁成功')
+    console.log(' vaultStore.isUnlocked = ', vaultStore.isUnlocked)
+    ElMessage.success({ message: '解锁成功', plain: true })
     handleClose()
-    props.afterManualSubmit()
-  } catch (e) {
-    return ElMessage.error({ message: (e as Error).message || '无效的私钥', plain: true })
+    // eslint-disable-next-line
+  } catch (error: any) {
+    ElMessage.error({ message: error.message || '解锁失败', plain: true })
+  } finally {
+    unlocking.value = false
   }
 }
 
-const placeholderText = `请粘贴 RSA 私钥内容：
-1. 确保包含完整的 PEM 格式标记
-2. -----BEGIN PRIVATE KEY-----
-              [您的私钥内容]
-3. -----END PRIVATE KEY-----`
+const uploadRef = ref<UploadInstance>()
+// 本地维护的上传文件列表
+const fileList = ref<UploadFile[]>([])
+
+const handleFileChange = (_uploadFile: UploadFile, uploadFiles: UploadFile[]) => {
+  const latestFile = uploadFiles[uploadFiles.length - 1]
+  const rawFile = latestFile?.raw
+  if (!rawFile) {
+    ElMessage.error({ message: '文件无效，请重新选择', plain: true })
+    return
+  }
+
+  if (!rawFile.name.endsWith('.pmk')) {
+    ElMessage.error({ message: '请上传 .pmk 格式的文件', plain: true })
+    uploadRef.value?.clearFiles()
+    return
+  }
+
+  // 始终只保留最新文件，新文件替换旧文件
+  fileList.value = [latestFile]
+}
+
+const handleFileRemove = () => {
+  fileList.value = []
+}
+
+const handleClose = () => {
+  showPinInput.value = false
+  pin.value = ''
+  handleFileRemove()
+  visible.value = false
+}
 </script>
 
 <template>
-  <el-dialog v-model="visible" width="500px" :title="title" @close="handleClose">
-    <!-- 内容区域 -->
-    <div>
-      <div>
-        <el-icon>
-          <Lock />
-        </el-icon>
+  <el-dialog v-model="visible" width="480px" :title="title" @close="handleClose">
+    <div class="decrypt-dialog">
+      <div class="hint-row">
+        <el-icon class="hint-icon"><InfoFilled /></el-icon>
+        <span class="hint-text">{{ message }}</span>
       </div>
 
-      <div class="message-text">
-        <p class="main-message">{{ message }}</p>
-        <p class="sub-message">{{ subMessage }}</p>
-      </div>
+      <el-form class="pin-form" @submit.prevent="handleUnlock">
+        <el-form-item required label="PIN">
+          <el-input placeholder="请输入 PIN" v-model="pin" />
+        </el-form-item>
+      </el-form>
 
-      <!-- 手动填写区域 -->
-      <div v-if="showManualInput">
-        <el-input v-model="manualKey" type="textarea" :rows="10" :placeholder="placeholderText" />
-      </div>
+      <el-upload
+        v-model:file-list="fileList"
+        ref="uploadRef"
+        class="key-upload"
+        drag
+        :auto-upload="false"
+        :on-change="handleFileChange"
+        :on-remove="handleFileRemove"
+        accept=".pmk"
+      >
+        <Transition name="upload-switch" mode="out-in">
+          <div v-if="fileList.length === 0" key="idle">
+            <el-icon class="upload-icon"><UploadFilled /></el-icon>
+            <div class="upload-text">拖拽密钥文件到此或 <em>点击上传</em></div>
+          </div>
+          <div v-else key="done" class="upload-done">
+            <el-icon class="done-icon"><CircleCheckFilled /></el-icon>
+            <div class="done-text">拖拽密钥文件到此或<em>点击替换</em></div>
+          </div>
+        </Transition>
+        <template #tip>
+          <Transition name="tip-switch" mode="out-in">
+            <div v-if="fileList.length === 0" key="tip-idle" class="upload-tip">仅支持 .pmk 格式</div>
+            <div v-else key="tip-done" class="upload-tip">当前秘钥文件：</div>
+          </Transition>
+        </template>
+      </el-upload>
     </div>
 
-    <!-- 底部按钮区域 -->
     <template #footer>
-      <div>
-        <el-button type="primary" @click="props.handleUpload"> 上传 </el-button>
-        <el-button type="success" v-if="!showManualInput" @click="showManualInput = true"> 手动填写 </el-button>
-        <el-button type="success" v-else @click="handleManualSubmit"> 提交 </el-button>
-        <el-button @click="handleClose"> 取消 </el-button>
+      <div class="dialog-footer">
+        <el-button @click="handleClose">取消</el-button>
+        <el-button type="primary" @click="handleUnlock" :loading="unlocking">解锁</el-button>
       </div>
     </template>
   </el-dialog>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.decrypt-dialog {
+  padding: 4px 0;
+}
+
+.hint-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background: var(--el-color-primary-light-9);
+  border-radius: 10px;
+  border: 1px solid var(--el-color-primary-light-8);
+  line-height: 1.6;
+}
+
+.hint-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: var(--el-color-primary);
+}
+
+.hint-text {
+  font-size: 15px;
+  color: var(--el-text-color-regular);
+}
+
+.pin-form {
+  margin-bottom: 20px;
+
+  :deep(.el-form-item) {
+    margin-bottom: 0;
+  }
+
+  :deep(.el-input__wrapper) {
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--el-border-color) inset;
+    background: var(--el-fill-color-blank);
+    transition:
+      box-shadow 0.2s,
+      background 0.2s;
+
+    &:hover {
+      background: var(--el-color-white);
+      box-shadow: 0 0 0 1px var(--el-border-color-dark) inset;
+    }
+
+    &.is-focus {
+      background: var(--el-color-white);
+      box-shadow: 0 0 0 1.5px var(--el-color-primary) inset;
+    }
+  }
+}
+
+.key-upload {
+  :deep(.el-upload-dragger) {
+    padding: 36px 24px;
+    border-radius: 12px;
+    border: 2px dashed var(--el-border-color);
+    background: var(--el-fill-color-blank);
+    transition:
+      border-color 0.2s,
+      background 0.2s;
+
+    &:hover {
+      border-color: var(--el-color-primary-light-5);
+      background: var(--el-color-primary-light-9);
+    }
+  }
+}
+
+.upload-icon {
+  font-size: 32px;
+  color: var(--el-color-primary-light-3);
+}
+
+.upload-text {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+  margin-top: 12px;
+
+  em {
+    color: var(--el-color-primary);
+    font-style: normal;
+  }
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 8px;
+}
+
+.upload-done {
+  text-align: center;
+}
+
+.done-icon {
+  font-size: 32px;
+  color: var(--el-color-success);
+}
+
+.done-text {
+  font-size: 14px;
+  color: var(--el-color-info);
+  margin-top: 12px;
+
+  em {
+    color: var(--el-color-primary);
+    font-style: normal;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.upload-switch-enter-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.upload-switch-leave-active {
+  transition: opacity 0.1s ease;
+}
+
+.upload-switch-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.upload-switch-leave-to {
+  opacity: 0;
+}
+
+.tip-switch-enter-active,
+.tip-switch-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.tip-switch-enter-from,
+.tip-switch-leave-to {
+  opacity: 0;
+}
+</style>
